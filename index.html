@@ -96,57 +96,8 @@
             <!-- Section 3: The Formula -->
             <section id="formula-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold text-indigo-600 mb-4">【內角和公式：規律大發現！】</h2>
-                <p class="text-lg mb-6">透過觀察，我們可以發現規律並推導出通用公式。試著完成下方的表格！</p>
                 
-                <div class="overflow-x-auto mb-6">
-                    <table class="w-full text-center border border-slate-300">
-                        <thead class="bg-slate-100">
-                            <tr>
-                                <th class="p-3 border border-slate-300">多邊形種類</th>
-                                <th class="p-3 border border-slate-300">邊數 (n)</th>
-                                <th class="p-3 border border-slate-300">可分割的三角形數量</th>
-                                <th class="p-3 border border-slate-300">內角和</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="p-2 border border-slate-300">三角形</td>
-                                <td class="p-2 border border-slate-300">3</td>
-                                <td class="p-2 border border-slate-300">1</td>
-                                <td class="p-2 border border-slate-300">180°</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2 border border-slate-300">四邊形</td>
-                                <td class="p-2 border border-slate-300">4</td>
-                                <td class="p-2 border border-slate-300">2</td>
-                                <td class="p-2 border border-slate-300">
-                                    <input type="number" data-answer="360" class="table-input w-24 text-center rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="?"> °
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="p-2 border border-slate-300">五邊形</td>
-                                <td class="p-2 border border-slate-300">5</td>
-                                <td class="p-2 border border-slate-300">
-                                    <input type="number" data-answer="3" class="table-input w-24 text-center rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="?">
-                                </td>
-                                <td class="p-2 border border-slate-300">540°</td>
-                            </tr>
-                            <tr>
-                                <td class="p-2 border border-slate-300">六邊形</td>
-                                <td class="p-2 border border-slate-300">6</td>
-                                <td class="p-2 border border-slate-300">4</td>
-                                <td class="p-2 border border-slate-300">
-                                    <input type="number" data-answer="720" class="table-input w-24 text-center rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="?"> °
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="text-center mb-8">
-                    <button id="check-answers-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition">檢查答案</button>
-                </div>
-
-                <div class="bg-indigo-50 p-6 rounded-lg text-center">
+                <div class="bg-indigo-50 p-6 rounded-lg text-center mb-8">
                     <p class="text-lg mb-2">我們發現，一個有 n 條邊的多邊形，總是可以被分割成 <span class="font-bold text-red-600">(n - 2)</span> 個三角形。</p>
                     <p class="text-lg mb-4">因此，它的內角和就是這些三角形的內角和總加，也就是...</p>
                     <div class="bg-white p-4 rounded-lg inline-block shadow">
@@ -332,25 +283,9 @@
             });
 
             // --- Section 3: Formula Table and Calculator ---
-            const checkBtn = document.getElementById('check-answers-btn');
-            const inputs = document.querySelectorAll('.table-input');
             const nInput = document.getElementById('n-input');
             const calcBtn = document.getElementById('calculate-btn');
             const calcResult = document.getElementById('calculator-result');
-
-            checkBtn.addEventListener('click', () => {
-                inputs.forEach(input => {
-                    input.classList.remove('input-correct', 'input-incorrect');
-                    const answer = input.dataset.answer;
-                    if (input.value) {
-                        if (input.value === answer) {
-                            input.classList.add('input-correct');
-                        } else {
-                            input.classList.add('input-incorrect');
-                        }
-                    }
-                });
-            });
             
             calcBtn.addEventListener('click', () => {
                 const n = parseInt(nInput.value);
