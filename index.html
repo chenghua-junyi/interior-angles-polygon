@@ -15,15 +15,23 @@
         .interactive-svg {
             touch-action: none;
         }
+        /* Style for interactive vertices */
         .vertex {
-            cursor: move;
+            cursor: pointer; /* Changed to pointer as they are clickable, not draggable in new section */
             transition: all 0.2s ease-in-out;
         }
         .vertex:hover {
             r: 10;
             fill: #4f46e5;
         }
-        .diagonal {
+        /* Style for selected vertices */
+        .vertex.selected {
+            fill: #4f46e5; /* Highlight color for selected vertices */
+            r: 9;
+            stroke: #3730a3;
+            stroke-width: 3;
+        }
+        .diagonal-line {
             stroke-dasharray: 1000;
             stroke-dashoffset: 1000;
             animation: draw-line 0.8s forwards;
@@ -73,7 +81,24 @@
                 </div>
             </section>
 
-            <!-- Section 2: Polygon Division -->
+            <!-- New Section: Quadrilateral Division -->
+            <section id="quadrilateral-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-indigo-600 mb-4">【四邊形可以分割成幾個三角形呢？】</h2>
+                <div class="grid md:grid-cols-2 gap-6 items-center">
+                    <div class="relative w-full aspect-square bg-slate-50 rounded-lg overflow-hidden">
+                        <svg id="quadrilateral-svg" class="interactive-svg w-full h-full" viewBox="0 0 300 300"></svg>
+                    </div>
+                    <div>
+                        <p class="text-lg mb-4">在四邊形 ABCD 中，試著選擇兩個**非相鄰**的頂點，將它們連接起來，看看能將四邊形分割成幾個三角形。</p>
+                        <p id="quad-message" class="text-base text-slate-500 mb-4">請選擇第一個頂點...</p>
+                        <div id="quad-result-display" class="space-y-2 text-lg p-4 bg-indigo-50 rounded-lg">
+                            <p>這個四邊形被分割成了 <span id="quad-triangle-count" class="font-bold text-red-600">0</span> 個三角形。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Polygon Division (Original Section 2) -->
             <section id="division-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold text-indigo-600 mb-4">【多邊形分割術：化繁為簡】</h2>
                 <p class="text-lg mb-4">任何多邊形都可以透過從一個頂點畫出所有對角線，將其分割成一系列的三角形。</p>
@@ -92,7 +117,7 @@
                 </div>
             </section>
 
-            <!-- Section 3: The Formula -->
+            <!-- Section 3: The Formula (Original Section 3) -->
             <section id="formula-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold text-indigo-600 mb-4">【內角和公式：規律大發現！】</h2>
                 
@@ -100,7 +125,7 @@
                     <p class="text-lg mb-2">我們發現，一個有 n 條邊的多邊形，總是可以被分割成 <span class="font-bold text-red-600">(n - 2)</span> 個三角形。</p>
                     <p class="text-lg mb-4">因此，它的內角和就是這些三角形的內角和總加，也就是...</p>
                     <div class="bg-white p-4 rounded-lg inline-block shadow">
-                         <p class="text-xl md:text-2xl font-bold text-indigo-800">多邊形內角和 = (n - 2) × 180°</p>
+                           <p class="text-xl md:text-2xl font-bold text-indigo-800">多邊形內角和 = (n - 2) × 180°</p>
                     </div>
                 </div>
 
@@ -120,23 +145,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
 
-            // --- Section 1: Interactive Triangle ---
-            const svg = document.getElementById('triangle-svg');
-            const width = 300;
-            const height = 300;
-            const angleADisplay = document.getElementById('angleA');
-            const angleBDisplay = document.getElementById('angleB');
-            const angleCDisplay = document.getElementById('angleC');
-            const angleSumDisplay = document.getElementById('angleSum');
-
-            let points = [
-                { x: 150, y: 50 },
-                { x: 50, y: 250 },
-                { x: 250, y: 250 }
-            ];
-
-            let draggedPoint = null;
-
+            // Helper function to create SVG elements
             function createSVGElement(tag, attrs) {
                 const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
                 for (let attr in attrs) {
@@ -145,17 +154,164 @@
                 return el;
             }
 
+            // Function to get distance between two points
+            function getDistance(p1, p2) {
+                return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+            }
+
+            // Function to get angle at p2 formed by p1-p2-p3
+            function getAngle(p1, p2, p3) {
+                const a = getDistance(p2, p3);
+                const b = getDistance(p1, p3);
+                const c = getDistance(p1, p2);
+                // Use Math.max/min to clamp values to avoid NaN from floating point inaccuracies
+                const cosAngle = Math.max(-1, Math.min(1, (a * a + c * c - b * b) / (2 * a * c)));
+                const angleRad = Math.acos(cosAngle);
+                return angleRad * (180 / Math.PI);
+            }
+
+
+            // --- Section 1: Interactive Triangle ---
+            const triangleSVG = document.getElementById('triangle-svg');
+            const triangleWidth = 300;
+            const triangleHeight = 300;
+            const angleADisplay = document.getElementById('angleA');
+            const angleBDisplay = document.getElementById('angleB');
+            const angleCDisplay = document.getElementById('angleC');
+            const angleSumDisplay = document.getElementById('angleSum');
+
+            let trianglePoints = [
+                { x: 150, y: 50 },
+                { x: 50, y: 250 },
+                { x: 250, y: 250 }
+            ];
+
+            let draggedPoint = null;
+
             function drawTriangle() {
-                svg.innerHTML = '';
+                triangleSVG.innerHTML = ''; // Clear SVG contents
+
+                // Draw the triangle polygon
                 const polygon = createSVGElement('polygon', {
-                    points: points.map(p => `${p.x},${p.y}`).join(' '),
+                    points: trianglePoints.map(p => `${p.x},${p.y}`).join(' '),
                     fill: 'rgba(79, 70, 229, 0.1)',
                     stroke: 'rgb(79, 70, 229)',
                     'stroke-width': 2
                 });
-                svg.appendChild(polygon);
+                triangleSVG.appendChild(polygon);
 
-                points.forEach((p, i) => {
+                // Draw vertices and attach drag handlers
+                trianglePoints.forEach((p, i) => {
+                    const vertex = createSVGElement('circle', {
+                        cx: p.x,
+                        cy: p.y,
+                        r: 8,
+                        fill: 'white',
+                        stroke: 'rgb(99, 102, 241)',
+                        'stroke-width': 2,
+                        class: 'vertex' // Reuse vertex class for styling
+                    });
+                    
+                    // Attach event listeners for dragging
+                    const startDrag = (e) => {
+                        e.preventDefault();
+                        draggedPoint = i;
+                    };
+                    
+                    vertex.addEventListener('mousedown', startDrag);
+                    vertex.addEventListener('touchstart', startDrag);
+                    triangleSVG.appendChild(vertex);
+
+                    // Add labels for vertices (A, B, C)
+                    const label = createSVGElement('text', {
+                        x: p.x + (i === 0 ? 5 : i === 1 ? -15 : 5), // Adjust label position for visibility
+                        y: p.y + (i === 0 ? -5 : i === 1 ? 5 : 5),
+                        'font-size': '14',
+                        'font-weight': 'bold',
+                        fill: 'rgb(79, 70, 229)'
+                    });
+                    label.textContent = String.fromCharCode(65 + i); // A, B, C
+                    triangleSVG.appendChild(label);
+                });
+
+                updateTriangleAngles();
+            }
+
+            function updateTriangleAngles() {
+                const angleA = getAngle(trianglePoints[1], trianglePoints[0], trianglePoints[2]);
+                const angleB = getAngle(trianglePoints[0], trianglePoints[1], trianglePoints[2]);
+                // Calculate angle C ensuring the sum is always 180 to avoid minor floating point discrepancies
+                const angleC = 180 - angleA - angleB; 
+                
+                angleADisplay.textContent = `${angleA.toFixed(1)}°`;
+                angleBDisplay.textContent = `${angleB.toFixed(1)}°`;
+                angleCDisplay.textContent = `${angleC.toFixed(1)}°`;
+                angleSumDisplay.textContent = '180.0°'; // Sum is always 180 for triangles
+            }
+            
+            const moveTriangleDrag = (e) => {
+                if (draggedPoint === null) return;
+                e.preventDefault(); // Prevent default touch behavior (e.g., scrolling)
+                const rect = triangleSVG.getBoundingClientRect();
+                const touch = e.touches ? e.touches[0] : e; // Handle touch and mouse events
+                const x = (touch.clientX - rect.left) / rect.width * triangleWidth;
+                const y = (touch.clientY - rect.top) / rect.height * triangleHeight;
+                
+                // Clamp coordinates to stay within SVG bounds
+                trianglePoints[draggedPoint].x = Math.max(0, Math.min(triangleWidth, x));
+                trianglePoints[draggedPoint].y = Math.max(0, Math.min(triangleHeight, y));
+                drawTriangle();
+            };
+            
+            const endTriangleDrag = () => {
+                draggedPoint = null;
+            };
+
+            // Attach event listeners for triangle dragging
+            triangleSVG.addEventListener('mousemove', moveTriangleDrag);
+            triangleSVG.addEventListener('touchmove', moveTriangleDrag);
+            window.addEventListener('mouseup', endTriangleDrag);
+            window.addEventListener('touchend', endTriangleDrag);
+
+            drawTriangle(); // Initial draw of the triangle
+
+
+            // --- New Section: Quadrilateral Division ---
+            const quadSVG = document.getElementById('quadrilateral-svg');
+            const quadMessage = document.getElementById('quad-message');
+            const quadTriangleCountDisplay = document.getElementById('quad-triangle-count');
+
+            const quadPoints = [
+                { x: 150, y: 40, label: 'A' },
+                { x: 260, y: 150, label: 'B' },
+                { x: 150, y: 260, label: 'C' },
+                { x: 40, y: 150, label: 'D' }
+            ];
+
+            let selectedVertex1 = null; // Stores index of the first selected vertex
+            let currentDiagonalLine = null; // Stores the SVG line element
+
+            function isAdjacent(idx1, idx2) {
+                // For a quadrilateral with 4 vertices (0, 1, 2, 3)
+                // Adjacent pairs are (0,1), (1,2), (2,3), (3,0)
+                const numVertices = quadPoints.length;
+                return Math.abs(idx1 - idx2) === 1 || Math.abs(idx1 - idx2) === (numVertices - 1);
+            }
+
+            function drawQuadrilateral() {
+                quadSVG.innerHTML = ''; // Clear SVG contents
+
+                // Draw the quadrilateral polygon
+                const polygon = createSVGElement('polygon', {
+                    points: quadPoints.map(p => `${p.x},${p.y}`).join(' '),
+                    fill: 'rgba(79, 70, 229, 0.1)',
+                    stroke: 'rgb(79, 70, 229)',
+                    'stroke-width': 2
+                });
+                quadSVG.appendChild(polygon);
+
+                // Draw vertices and labels
+                quadPoints.forEach((p, i) => {
                     const vertex = createSVGElement('circle', {
                         cx: p.x,
                         cy: p.y,
@@ -166,67 +322,98 @@
                         class: 'vertex'
                     });
                     
-                    const startDrag = (e) => {
-                        e.preventDefault();
-                        draggedPoint = i;
-                    };
-                    
-                    vertex.addEventListener('mousedown', startDrag);
-                    vertex.addEventListener('touchstart', startDrag);
-                    svg.appendChild(vertex);
+                    // Add selected class if it's the first selected vertex
+                    if (selectedVertex1 === i) {
+                        vertex.classList.add('selected');
+                    }
+
+                    vertex.addEventListener('click', () => handleVertexClick(i));
+                    quadSVG.appendChild(vertex);
+
+                    // Add labels (A, B, C, D)
+                    const label = createSVGElement('text', {
+                        x: p.x + (i === 0 ? 0 : i === 1 ? 5 : i === 2 ? 0 : -15), // Adjust label position
+                        y: p.y + (i === 0 ? -10 : i === 1 ? 5 : i === 2 ? 15 : 5),
+                        'font-size': '14',
+                        'font-weight': 'bold',
+                        fill: 'rgb(79, 70, 229)',
+                        'text-anchor': 'middle' // Center text for better alignment
+                    });
+                    label.textContent = p.label;
+                    quadSVG.appendChild(label);
                 });
 
-                updateAngles();
+                // Redraw the diagonal if it exists after clearing SVG
+                if (currentDiagonalLine) {
+                    quadSVG.appendChild(currentDiagonalLine);
+                }
             }
 
-            function getDistance(p1, p2) {
-                return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+            function resetQuadrilateralInteraction() {
+                selectedVertex1 = null;
+                if (currentDiagonalLine) {
+                    currentDiagonalLine.remove();
+                    currentDiagonalLine = null;
+                }
+                quadTriangleCountDisplay.textContent = '0';
+                quadMessage.textContent = '請選擇第一個頂點...';
+                drawQuadrilateral(); // Redraw to clear highlights
             }
 
-            function getAngle(p1, p2, p3) { // Angle at p2
-                const a = getDistance(p2, p3);
-                const b = getDistance(p1, p3);
-                const c = getDistance(p1, p2);
-                const angleRad = Math.acos((a * a + c * c - b * b) / (2 * a * c));
-                return angleRad * (180 / Math.PI);
+            function handleVertexClick(index) {
+                if (selectedVertex1 === null) {
+                    // First vertex selected
+                    selectedVertex1 = index;
+                    quadMessage.textContent = `已選擇頂點 ${quadPoints[index].label}。請選擇第二個非相鄰頂點...`;
+                    drawQuadrilateral(); // Redraw to highlight the selected vertex
+                } else if (selectedVertex1 === index) {
+                    // Clicking the same vertex again, deselect it
+                    resetQuadrilateralInteraction();
+                } else {
+                    // Second vertex selected
+                    const secondVertexIndex = index;
+                    if (isAdjacent(selectedVertex1, secondVertexIndex)) {
+                        quadMessage.textContent = '錯誤：請選擇兩個**非相鄰**的頂點！';
+                        // Briefly show error, then reset
+                        setTimeout(resetQuadrilateralInteraction, 1500);
+                    } else {
+                        // Valid diagonal
+                        const p1 = quadPoints[selectedVertex1];
+                        const p2 = quadPoints[secondVertexIndex];
+
+                        // Remove existing diagonal if any
+                        if (currentDiagonalLine) {
+                            currentDiagonalLine.remove();
+                        }
+
+                        // Draw the new diagonal line
+                        const line = createSVGElement('line', {
+                            x1: p1.x,
+                            y1: p1.y,
+                            x2: p2.x,
+                            y2: p2.y,
+                            stroke: 'rgb(239, 68, 68)', // Red color for diagonal
+                            'stroke-width': 2,
+                            class: 'diagonal-line' // Apply animation class
+                        });
+                        quadSVG.appendChild(line);
+                        currentDiagonalLine = line; // Store reference to the line
+
+                        // A quadrilateral divided by one diagonal always forms 2 triangles
+                        quadTriangleCountDisplay.textContent = '2';
+                        quadMessage.textContent = `恭喜！四邊形已分割成 2 個三角形。`;
+                        
+                        // Reset selection after drawing the diagonal
+                        selectedVertex1 = null;
+                        setTimeout(drawQuadrilateral, 800); // Redraw to remove highlight after animation
+                    }
+                }
             }
 
-            function updateAngles() {
-                const angleA = getAngle(points[1], points[0], points[2]);
-                const angleB = getAngle(points[0], points[1], points[2]);
-                const angleC = 180 - angleA - angleB; // Ensure sum is always 180
-                
-                angleADisplay.textContent = `${angleA.toFixed(1)}°`;
-                angleBDisplay.textContent = `${angleB.toFixed(1)}°`;
-                angleCDisplay.textContent = `${angleC.toFixed(1)}°`;
-                angleSumDisplay.textContent = '180.0°';
-            }
-            
-            const moveDrag = (e) => {
-                if (draggedPoint === null) return;
-                e.preventDefault();
-                const rect = svg.getBoundingClientRect();
-                const touch = e.touches ? e.touches[0] : e;
-                const x = (touch.clientX - rect.left) / rect.width * width;
-                const y = (touch.clientY - rect.top) / rect.height * height;
-                
-                points[draggedPoint].x = Math.max(0, Math.min(width, x));
-                points[draggedPoint].y = Math.max(0, Math.min(height, y));
-                drawTriangle();
-            };
-            
-            const endDrag = () => {
-                draggedPoint = null;
-            };
+            drawQuadrilateral(); // Initial draw of the quadrilateral
 
-            svg.addEventListener('mousemove', moveDrag);
-            svg.addEventListener('touchmove', moveDrag);
-            window.addEventListener('mouseup', endDrag);
-            window.addEventListener('touchend', endDrag);
 
-            drawTriangle();
-
-            // --- Section 2: Polygon Divider ---
+            // --- Section 2: Polygon Divider (Original) ---
             const polygonSVG = document.getElementById('polygon-svg');
             const polygonSidesInput = document.getElementById('polygon-sides-input');
             const drawPolygonBtn = document.getElementById('draw-polygon-btn');
@@ -257,20 +444,40 @@
                 polygonSVG.appendChild(polygon);
 
                 // Draw diagonals from the first vertex
-                for (let i = 2; i < n - 1; i++) {
-                    const line = createSVGElement('line', {
-                        x1: vertices[0].x,
-                        y1: vertices[0].y,
-                        x2: vertices[i].x,
-                        y2: vertices[i].y,
-                        stroke: 'rgb(99, 102, 241)',
-                        'stroke-width': 1.5,
-                        'stroke-dasharray': '5, 5',
-                        'class': 'diagonal'
-                    });
-                    line.style.animationDelay = `${(i-2) * 0.05}s`;
-                    polygonSVG.appendChild(line);
+                // For a polygon with n sides, it can be divided into (n-2) triangles by drawing (n-3) diagonals
+                // from one vertex. The first vertex (index 0) connects to vertices from index 2 to n-2.
+                // It means if n=3 (triangle), 3-3=0 diagonals. i goes from 2 to 3-1=2, loop not entered. Correct.
+                // If n=4 (quadrilateral), 4-3=1 diagonal. i goes from 2 to 4-1=3. So i=2. Connects 0 to 2 (A to C). Correct.
+                for (let i = 2; i < n; i++) {
+                    // Skip drawing if it's an adjacent vertex, or the same vertex.
+                    // Only draw if it's a diagonal (i.e., not the immediate next or previous vertex)
+                    if (i !== 0 && i !== (n - 1)) { // This condition is more robust for general polygon
+                        const line = createSVGElement('line', {
+                            x1: vertices[0].x,
+                            y1: vertices[0].y,
+                            x2: vertices[i].x,
+                            y2: vertices[i].y,
+                            stroke: 'rgb(99, 102, 241)',
+                            'stroke-width': 1.5,
+                            'stroke-dasharray': '5, 5',
+                            'class': 'diagonal-line' // Reuse class for dash animation
+                        });
+                        line.style.animationDelay = `${(i-2) * 0.05}s`; // Stagger animation
+                        polygonSVG.appendChild(line);
+                    }
                 }
+
+                // Add vertices as small circles
+                vertices.forEach((p, i) => {
+                    const vertexCircle = createSVGElement('circle', {
+                        cx: p.x,
+                        cy: p.y,
+                        r: 5,
+                        fill: 'rgb(99, 102, 241)',
+                        class: 'vertex'
+                    });
+                    polygonSVG.appendChild(vertexCircle);
+                });
             }
 
             function handleDrawPolygon() {
@@ -278,7 +485,7 @@
                 if (n && n >= 3 && n <= 100) {
                     drawPolygon(n);
                 } else {
-                    polygonSVG.innerHTML = ''; // Clear the drawing
+                    polygonSVG.innerHTML = ''; // Clear the drawing if input is invalid
                 }
             }
             
@@ -310,7 +517,7 @@
                 }
             });
             
-             nInput.addEventListener('keydown', (e) => {
+            nInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     calcBtn.click();
                 }
