@@ -26,7 +26,7 @@
         .diagonal {
             stroke-dasharray: 1000;
             stroke-dashoffset: 1000;
-            animation: draw-line 1s forwards;
+            animation: draw-line 0.8s forwards;
         }
         @keyframes draw-line {
             to {
@@ -77,18 +77,17 @@
             <section id="division-section" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold text-indigo-600 mb-4">【多邊形分割術：化繁為簡】</h2>
                 <p class="text-lg mb-4">任何多邊形都可以透過從一個頂點畫出所有對角線，將其分割成一系列的三角形。</p>
-                <div class="flex flex-wrap justify-center gap-3 mb-6">
-                    <button data-sides="4" class="polygon-selector-btn bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition">四邊形</button>
-                    <button data-sides="5" class="polygon-selector-btn bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition">五邊形</button>
-                    <button data-sides="6" class="polygon-selector-btn bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition">六邊形</button>
-                    <button data-sides="7" class="polygon-selector-btn bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition">七邊形</button>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+                    <label for="polygon-sides-input" class="text-lg">輸入多邊形的邊數 (3-100):</label>
+                    <input type="number" id="polygon-sides-input" min="3" max="100" class="w-28 text-center rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2" placeholder="例如：5">
+                    <button id="draw-polygon-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-5 rounded-lg transition w-full sm:w-auto">繪製</button>
                 </div>
                 <div class="grid md:grid-cols-2 gap-6 items-center">
                     <div class="relative w-full aspect-square bg-slate-50 rounded-lg overflow-hidden">
                         <svg id="polygon-svg" class="w-full h-full" viewBox="0 0 300 300"></svg>
                     </div>
-                    <div>
-                        <p class="text-slate-600 text-lg">你發現了什麼規律嗎？多邊形的邊數和它能被分割成的三角形數量之間有什麼關係呢？</p>
+                    <div class="flex items-center justify-center h-full">
+                        <p class="text-slate-600 text-xl">你發現了什麼規律嗎？多邊形的邊數和它能被分割成的三角形數量之間有什麼關係呢？</p>
                     </div>
                 </div>
             </section>
@@ -229,18 +228,19 @@
 
             // --- Section 2: Polygon Divider ---
             const polygonSVG = document.getElementById('polygon-svg');
-            const selectorBtns = document.querySelectorAll('.polygon-selector-btn');
+            const polygonSidesInput = document.getElementById('polygon-sides-input');
+            const drawPolygonBtn = document.getElementById('draw-polygon-btn');
 
             function drawPolygon(n) {
                 polygonSVG.innerHTML = '';
                 const centerX = 150;
                 const centerY = 150;
-                const radius = 120;
+                const radius = 130;
                 const vertices = [];
                 const angleStep = (2 * Math.PI) / n;
 
                 for (let i = 0; i < n; i++) {
-                    // Start from top
+                    // Start from top, rotating so the base is horizontal for smaller polygons
                     const angle = angleStep * i - Math.PI / 2;
                     vertices.push({
                         x: centerX + radius * Math.cos(angle),
@@ -268,19 +268,27 @@
                         'stroke-dasharray': '5, 5',
                         'class': 'diagonal'
                     });
-                    line.style.animationDelay = `${(i-2) * 0.3}s`;
+                    line.style.animationDelay = `${(i-2) * 0.05}s`;
                     polygonSVG.appendChild(line);
                 }
             }
+
+            function handleDrawPolygon() {
+                const n = parseInt(polygonSidesInput.value);
+                if (n && n >= 3 && n <= 100) {
+                    drawPolygon(n);
+                } else {
+                    polygonSVG.innerHTML = ''; // Clear the drawing
+                }
+            }
             
-            selectorBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    selectorBtns.forEach(b => b.classList.remove('bg-indigo-700', 'ring-2', 'ring-offset-2', 'ring-indigo-500'));
-                    btn.classList.add('bg-indigo-700', 'ring-2', 'ring-offset-2', 'ring-indigo-500');
-                    const sides = parseInt(btn.dataset.sides);
-                    drawPolygon(sides);
-                });
+            drawPolygonBtn.addEventListener('click', handleDrawPolygon);
+            polygonSidesInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    handleDrawPolygon();
+                }
             });
+
 
             // --- Section 3: Formula Table and Calculator ---
             const nInput = document.getElementById('n-input');
